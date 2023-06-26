@@ -14,7 +14,6 @@ from pymongo.collection import Collection
 from pymongo.cursor import Cursor
 from pymongo.database import Database
 
-
 class Base:
     def __init__(self) -> Any:
         self.client = MongoClient(
@@ -80,18 +79,15 @@ class Pipeline_search(Collections):
         self.collection = collection
 
     def filter_documents_match(self) -> Cursor:
-        pipeline = [{
-            "$match": {
-                '$and': self.criteria}
-            }]
+        pipeline = [{"$match": {"$and": self.criteria}}]
         return self.collection.aggregate(pipeline)
-    
+
     def sort_documents(self) -> Cursor:
-        pipeline = [
-        {
-        '$sort': self.criteria
-        }
-            ]
+        pipeline = [{"$sort": self.criteria}]
+        return collection.aggregate(pipeline)
+
+    def project_documents(self) -> Cursor:
+        pipeline = [{"$project": self.criteria}]
         return collection.aggregate(pipeline)
 
 
@@ -100,25 +96,37 @@ if "__main__" == __name__:
 
     collection = db.get_collection()
 
-    schema_match = [{
-        "invoice_details.tax": 21
-              },
-              {'$or':[{"invoice_details.buyer_name": "python"}, {"invoice_details.buyer_name": "mammal"}]}
-              ]
-        
-    
+    schema_match = [
+        {"invoice_details.tax": 21},
+        {
+            "$or": [
+                {"invoice_details.buyer_name": "python"},
+                {"invoice_details.buyer_name": "mammal"},
+            ]
+        },
+    ]
+
     search1 = Pipeline_search(criteria=schema_match, collection=collection)
     match_document = search1.filter_documents_match()
     for x in match_document:
         print(x)
 
 
-schema_sort: Dict[str,int] = {
-
-    'Date': 1,
-    'invoice_number': 1,
+schema_sort: Dict[str, int] = {
+    "Date": 1,
+    "invoice_number": 1,
 }
 sort = Pipeline_search(criteria=schema_sort, collection=collection)
 sort_document = sort.sort_documents()
 for x in sort_document:
+    print(x)
+
+schema_project: Dict[str, int] = {
+    "invoice_number": 1,
+    "invoice_details.buyer_name": 1,
+    "invoice_details.goods.name": 1
+}
+
+schema_projection = Pipeline_search(criteria=schema_project, collection=collection)
+for x in schema_projection.project_documents():
     print(x)

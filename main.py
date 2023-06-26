@@ -13,6 +13,8 @@ from db_rules import insert_invoice_rule
 from pymongo.collection import Collection
 from pymongo.cursor import Cursor
 from pymongo.database import Database
+import json
+
 
 class Base:
     def __init__(self) -> Any:
@@ -74,7 +76,9 @@ class Collections(Base):
 
 
 class Pipeline_search(Collections):
-    def __init__(self, collection: Collection, criteria: List[Dict[str, Any]]) -> None:
+    def __init__(
+        self, collection: Collection, criteria: List[Dict[str, Any]] = None
+    ) -> None:
         self.criteria = criteria
         self.collection = collection
 
@@ -84,11 +88,14 @@ class Pipeline_search(Collections):
 
     def sort_documents(self) -> Cursor:
         pipeline = [{"$sort": self.criteria}]
-        return collection.aggregate(pipeline)
+        return self.collection.aggregate(pipeline)
 
     def project_documents(self) -> Cursor:
         pipeline = [{"$project": self.criteria}]
-        return collection.aggregate(pipeline)
+        return self.collection.aggregate(pipeline)
+
+    def aggregate_documents(self, pipeline: Dict[str, Any]) -> Cursor:
+        return self.collection.aggregate(pipeline)
 
 
 if "__main__" == __name__:
@@ -124,9 +131,40 @@ for x in sort_document:
 schema_project: Dict[str, int] = {
     "invoice_number": 1,
     "invoice_details.buyer_name": 1,
-    "invoice_details.goods.name": 1
+    "invoice_details.goods.name": 1,
 }
 
 schema_projection = Pipeline_search(criteria=schema_project, collection=collection)
 for x in schema_projection.project_documents():
     print(x)
+
+
+pipline: Dict[str, Any] = [
+    {
+        "$match": {
+            "$and": [
+                {"invoice_details.tax": 21},
+                {
+                    "$or": [
+                        {"invoice_details.buyer_name": "python"},
+                        {"invoice_details.buyer_name": "mammal"},
+                        {"invoice_details.price": {"$gte": 70000}},
+                    ]
+                },
+            ],
+        }
+    },
+    {"$sort": {"invoice_details.price_with_tax": -1}},
+    {
+        "$project": {
+            "_id": 0,
+            "invoice_number": 1,
+            "invoice_details.price_with_tax": 1,
+            "invoice_details.buyer_name": 1,
+        }
+    },
+]
+
+aggregate = Pipeline_search(collection=collection)
+for x in aggregate.aggregate_documents(pipeline=pipline):
+    print(json.dumps(x, indent=2))

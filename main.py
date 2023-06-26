@@ -10,6 +10,9 @@ from pymongo.errors import (
     OperationFailure,
 )
 from db_rules import insert_invoice_rule
+from pymongo.collection import Collection
+from pymongo.cursor import Cursor
+from pymongo.database import Database
 
 
 class Base:
@@ -50,11 +53,14 @@ class Base:
 
 
 class Collections(Base):
-    def __init__(self, db: str, collection: str = None) -> Any:
+    def __init__(self, db: str, collection: str = None) -> None:
         super().__init__()
         self.db = self.execute_with_retry(self.get_db, db)
         self.collection_name = collection
         self.collection = self.db[self.collection_name]
+
+    def get_collection(self):
+        return self.collection
 
     def connect_validation_rule(self) -> str:
         try:
@@ -66,3 +72,34 @@ class Collections(Base):
         self.connect_validation_rule()
         result = self.collection.insert_one(task)
         return str(result.inserted_id)
+
+
+class Pipeline_search(Collections):
+    def __init__(self, collection: Collection, criteria: List[Dict[str, Any]]) -> None:
+        self.criteria = criteria
+        self.collection = collection
+
+    def filter_documents_match(self) -> Cursor:
+        pipeline = [{
+            "$match": {
+                '$and': self.criteria}
+            }]
+        return self.collection.aggregate(pipeline)
+
+
+if "__main__" == __name__:
+    db = Collections(db="black_database", collection="invoices")
+
+    collection = db.get_collection()
+
+    schema_match = [{
+        "invoice_details.tax": 21
+              },
+              {'$or':[{"invoice_details.buyer_name": "python"}, {"invoice_details.buyer_name": "mammal"}]}
+              ]
+        
+    
+    search = Pipeline_search(criteria=schema_match, collection=collection)
+    match_document = search.filter_documents_match()
+    for x in match_document:
+        print(x)

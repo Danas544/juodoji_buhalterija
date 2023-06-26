@@ -85,6 +85,14 @@ class Pipeline_search(Collections):
                 '$and': self.criteria}
             }]
         return self.collection.aggregate(pipeline)
+    
+    def sort_documents(self) -> Cursor:
+        pipeline = [
+        {
+        '$sort': self.criteria
+        }
+            ]
+        return collection.aggregate(pipeline)
 
 
 if "__main__" == __name__:
@@ -99,7 +107,18 @@ if "__main__" == __name__:
               ]
         
     
-    search = Pipeline_search(criteria=schema_match, collection=collection)
-    match_document = search.filter_documents_match()
+    search1 = Pipeline_search(criteria=schema_match, collection=collection)
+    match_document = search1.filter_documents_match()
     for x in match_document:
         print(x)
+
+
+schema_sort: Dict[str,int] = {
+
+    'Date': 1,
+    'invoice_number': 1,
+}
+sort = Pipeline_search(criteria=schema_sort, collection=collection)
+sort_document = sort.sort_documents()
+for x in sort_document:
+    print(x)

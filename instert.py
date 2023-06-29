@@ -59,8 +59,7 @@ def insert_invoice(number, date, sel_name, b_name, price, tax, good_name, code):
     db.create_document(task=invoice)
     return invoice
 
-
-if "__main__" == __name__:
+if __name__ == '__main__':
     db = Collections(db="black_database", collection="invoices")
     for i in range(500, 601):
         invoice = insert_invoice(

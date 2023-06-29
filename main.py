@@ -14,7 +14,7 @@ from pymongo.collection import Collection
 from pymongo.cursor import Cursor
 from pymongo.database import Database
 import json
-
+import time
 
 class Base:
     def __init__(self) -> Any:
@@ -24,17 +24,16 @@ class Base:
 
     def get_db(self, db: str) -> Optional[MongoClient]:
         try:
-            self.db = self.client[db]
             self.client.server_info()
-            return self.db
+            return self.client[db]
 
         except ServerSelectionTimeoutError as e:
             print("Connection failure:", str(e))
-            raise Exception("Connection failure")
+            raise Exception("Connection failure: " + str(e))
 
         except PyMongoError as e:
             print("An error occurred:", str(e))
-            exit()
+            raise e
 
     def execute_with_retry(self, func, db):
         max_retries = 3
@@ -50,7 +49,7 @@ class Base:
                 time.sleep(1)
         else:
             print("Maximum retries exceeded. Giving up.")
-            exit()
+            raise Exception("Maximum retries exceeded")
 
 
 class Collections(Base):
@@ -98,7 +97,7 @@ class Pipeline_search(Collections):
         return self.collection.aggregate(pipeline)
 
 
-if "__main__" == __name__:
+if __name__ == '__main__':
     db = Collections(db="black_database", collection="invoices")
 
     collection = db.get_collection()
@@ -107,8 +106,8 @@ if "__main__" == __name__:
         {"invoice_details.tax": 21},
         {
             "$or": [
-                {"invoice_details.buyer_name": "python"},
-                {"invoice_details.buyer_name": "mammal"},
+                {"invoice_details.buyer_name": "mole"},
+                {"invoice_details.buyer_name": "hippopotamus"},
             ]
         },
     ]

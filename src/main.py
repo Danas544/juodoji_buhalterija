@@ -19,7 +19,7 @@ import time
 class Base:
     def __init__(self) -> Any:
         self.client = MongoClient(
-            "mongodb://localhost:27017/", serverSelectionTimeoutMS=5000
+            "mongodb://172.17.0.2:27017/", serverSelectionTimeoutMS=5000
         )
 
     def get_db(self, db: str) -> Optional[MongoClient]:

@@ -1,5 +1,5 @@
 # pylint: disable-all
-from main import Collections
+from src.main import Collections
 import pytz
 from datetime import datetime, timedelta, timezone
 from py_random_words import RandomWords

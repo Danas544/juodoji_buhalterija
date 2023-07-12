@@ -4,6 +4,7 @@ from pymongo import MongoClient
 from pymongo.errors import ServerSelectionTimeoutError
 from main import Base
 
+
 class TestBase(unittest.TestCase):
     def setUp(self):
         self.client_mock = MagicMock(MongoClient)
@@ -18,12 +19,12 @@ class TestBase(unittest.TestCase):
         result = self.base.get_db(db_name)
 
         self.assertEqual(result, db_mock)
-        
-        
 
     def test_get_db_timeout_error(self):
         db_name = "test_db"
-        self.client_mock.server_info.side_effect = ServerSelectionTimeoutError("timeout")
+        self.client_mock.server_info.side_effect = ServerSelectionTimeoutError(
+            "timeout"
+        )
 
         with self.assertRaises(Exception) as context:
             self.base.get_db(db_name)
@@ -41,7 +42,6 @@ class TestBase(unittest.TestCase):
         self.assertTrue("mongo error" in str(context.exception))
         self.client_mock.server_info.assert_called_once()
 
-
     def test_execute_with_retry_success(self):
         mock_func = MagicMock(return_value="success")
 
@@ -51,7 +51,9 @@ class TestBase(unittest.TestCase):
         mock_func.assert_called_once_with("test_db")
 
     def test_execute_with_retry_exception(self):
-        mock_func = MagicMock(side_effect=[Exception("error1"), Exception("error2"), "success"])
+        mock_func = MagicMock(
+            side_effect=[Exception("error1"), Exception("error2"), "success"]
+        )
 
         result = self.base.execute_with_retry(mock_func, "test_db")
 

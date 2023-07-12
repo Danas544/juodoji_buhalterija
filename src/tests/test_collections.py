@@ -11,11 +11,9 @@ class TestCollections(unittest.TestCase):
         self.collection_mock = MagicMock(Collection)
         self.collections = Collections(db=self.db_name, collection=self.collection_name)
 
-
     def test_get_collection(self):
         collection = self.collections.get_collection()
         self.assertIsInstance(collection, Collection)
-
 
 
 if __name__ == "__main__":

@@ -2,11 +2,8 @@
 from typing import Any, List, Optional, Union, Dict
 from pymongo import MongoClient
 from pymongo.errors import (
-    ConnectionFailure,
     PyMongoError,
     ServerSelectionTimeoutError,
-    CollectionInvalid,
-    ExecutionTimeout,
     OperationFailure,
 )
 from db_rules import insert_invoice_rule
@@ -21,6 +18,9 @@ class Base:
         self.client = MongoClient(
             "mongodb://172.17.0.2:27017/", serverSelectionTimeoutMS=5000
         )
+
+    def __del__(self):
+        self.client.close()
 
     def get_db(self, db: str) -> Optional[MongoClient]:
         try:
@@ -67,10 +67,14 @@ class Collections(Base):
             self.db.command("collMod", self.collection.name, **insert_invoice_rule())
         except OperationFailure as e:
             print(f"Failed to enable schema validation: {e}")
+            raise e
 
     def create_document(self, task: Dict[str, Any]) -> str:
         self.connect_validation_rule()
-        result = self.collection.insert_one(task)
+        try:
+            result = self.collection.insert_one(task)
+        except PyMongoError as e:
+            print(f'Failed to insert document: {e}')
         return str(result.inserted_id)
 
 
@@ -97,7 +101,7 @@ class Pipeline_search(Collections):
         return self.collection.aggregate(pipeline)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     db = Collections(db="black_database", collection="invoices")
 
     collection = db.get_collection()
@@ -118,52 +122,52 @@ if __name__ == '__main__':
         print(x)
 
 
-schema_sort: Dict[str, int] = {
-    "Date": 1,
-    "invoice_number": 1,
-}
-sort = Pipeline_search(criteria=schema_sort, collection=collection)
-sort_document = sort.sort_documents()
-for x in sort_document:
-    print(x)
+    schema_sort: Dict[str, int] = {
+        "Date": 1,
+        "invoice_number": 1,
+    }
+    sort = Pipeline_search(criteria=schema_sort, collection=collection)
+    sort_document = sort.sort_documents()
+    for x in sort_document:
+        print(x)
 
-schema_project: Dict[str, int] = {
-    "invoice_number": 1,
-    "invoice_details.buyer_name": 1,
-    "invoice_details.goods.name": 1,
-}
+    schema_project: Dict[str, int] = {
+        "invoice_number": 1,
+        "invoice_details.buyer_name": 1,
+        "invoice_details.goods.name": 1,
+    }
 
-schema_projection = Pipeline_search(criteria=schema_project, collection=collection)
-for x in schema_projection.project_documents():
-    print(x)
+    schema_projection = Pipeline_search(criteria=schema_project, collection=collection)
+    for x in schema_projection.project_documents():
+        print(x)
 
 
-pipline: Dict[str, Any] = [
-    {
-        "$match": {
-            "$and": [
-                {"invoice_details.tax": 21},
-                {
-                    "$or": [
-                        {"invoice_details.buyer_name": "python"},
-                        {"invoice_details.buyer_name": "mammal"},
-                        {"invoice_details.price": {"$gte": 70000}},
-                    ]
-                },
-            ],
-        }
-    },
-    {"$sort": {"invoice_details.price_with_tax": -1}},
-    {
-        "$project": {
-            "_id": 0,
-            "invoice_number": 1,
-            "invoice_details.price_with_tax": 1,
-            "invoice_details.buyer_name": 1,
-        }
-    },
-]
+    pipline: Dict[str, Any] = [
+        {
+            "$match": {
+                "$and": [
+                    {"invoice_details.tax": 21},
+                    {
+                        "$or": [
+                            {"invoice_details.buyer_name": "python"},
+                            {"invoice_details.buyer_name": "mammal"},
+                            {"invoice_details.price": {"$gte": 70000}},
+                        ]
+                    },
+                ],
+            }
+        },
+        {"$sort": {"invoice_details.price_with_tax": -1}},
+        {
+            "$project": {
+                "_id": 0,
+                "invoice_number": 1,
+                "invoice_details.price_with_tax": 1,
+                "invoice_details.buyer_name": 1,
+            }
+        },
+    ]
 
-aggregate = Pipeline_search(collection=collection)
-for x in aggregate.aggregate_documents(pipeline=pipline):
-    print(json.dumps(x, indent=2))
+    aggregate = Pipeline_search(collection=collection)
+    for x in aggregate.aggregate_documents(pipeline=pipline):
+        print(json.dumps(x, indent=2))
